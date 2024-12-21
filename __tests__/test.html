@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Highlight Test</title>
+  </head>
+  <body>
+    <div class="highlightable">This is a test. Testing highlight functionality.</div>
+    <div class="highlightable">Another test case for highlight.</div>
+    <script type="module">
+      import { Highlighter } from '../dist/index.js';
+
+      // 初始化 Highlighter 实例
+      const highlighter1 = new Highlighter(['test'], {
+        customStyles: { backgroundColor: 'yellow' }
+      });
+      const highlighter2 = new Highlighter(['est'], {
+        customStyles: { backgroundColor: 'lightgreen' }
+      });
+      const highlighter3 = new Highlighter(['st'], {
+        customStyles: { backgroundColor: 'red' }
+      });
+      const highlighter4 = new Highlighter(['t'], {
+        customStyles: { backgroundColor: 'blue' }
+      });
+
+      // 应用高亮
+      highlighter1.highlight();
+      highlighter2.highlight();
+      highlighter3.highlight();
+      highlighter4.highlight();
+
+      console.log('Highlighter applied.');
+    </script>
+  </body>
+</html>
