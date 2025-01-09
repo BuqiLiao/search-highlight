@@ -6,17 +6,18 @@
     <title>Highlight Test</title>
   </head>
   <body>
-    <div class="highlightable">This is a test. Testing highlight functionality.</div>
+    <div class="highlightable" contenteditable="true">This is a test. Testing highlight functionality.</div>
     <div class="highlightable">Another test case for highlight.</div>
     <script type="module">
-      import { Highlighter } from '../dist/index.js';
+      import { Highlighter } from '../dist/search-highlight.es.js';
 
       // 初始化 Highlighter 实例
       const highlighter1 = new Highlighter(['test'], {
         customStyles: { backgroundColor: 'yellow' }
       });
       const highlighter2 = new Highlighter(['est'], {
-        customStyles: { backgroundColor: 'lightgreen' }
+        customStyles: { backgroundColor: 'lightgreen' },
+        tagName: 'a'
       });
       const highlighter3 = new Highlighter(['st'], {
         customStyles: { backgroundColor: 'red' }

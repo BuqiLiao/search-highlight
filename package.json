@@ -2,8 +2,10 @@
   "name": "search-highlight",
   "version": "1.0.0",
   "description": "A lightweight library for highlighting and removing text highlights within DOM elements.",
+  "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "vite build && tsc --emitDeclarationOnly",
+    "build:watch": "vite build --watch && tsc --emitDeclarationOnly --watch",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -14,7 +16,8 @@
   "files": [
     "dist"
   ],
-  "main": "dist/index.js",
+  "main": "dist/search-highlight.umd.js",
+  "module": "dist/search-highlight.es.js",
   "types": "dist/index.d.ts",
   "keywords": [
     "highlight",
@@ -37,7 +40,9 @@
     "prettier": "^3.4.2",
     "ts-jest": "^29.2.5",
     "tslib": "^2.8.1",
-    "typescript": "^5.7.2"
+    "type-fest": "^4.31.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
   },
   "dependencies": {
     "jest-environment-jsdom": "^29.7.0"

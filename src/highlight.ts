@@ -1,46 +1,24 @@
 import { escapeRegExp } from './utils.js';
+import type { SetRequired, SetOptional } from 'type-fest';
 
 type HighlightOptions = {
   className?: string;
   caseSensitive?: boolean;
-  customStyles?: Partial<CSSStyleDeclaration>;
   containerSelector?: string;
-  tagName?: string; // 新增：允许自定义标签
-  excludeSelector?: string; // 新增：允许排除某些子元素
+  tagName?: string;
+  excludeSelector?: string;
+  customStyles?: Partial<CSSStyleDeclaration>;
   onHighlight?: (element: Node, searchTerm: string) => void;
 };
 
-type InnerHighlightOptions = {
-  className: string;
-  caseSensitive: boolean;
-  customStyles?: Partial<CSSStyleDeclaration>;
-  containerSelector: string;
-  tagName: string;
-  excludeSelector: string;
-  onHighlight?: (element: Node, searchTerm: string) => void;
-};
+type InnerHighlightOptions = SetRequired<
+  HighlightOptions,
+  'className' | 'caseSensitive' | 'containerSelector' | 'tagName' | 'excludeSelector'
+>;
 
 export class Highlighter {
   private static highlighterIdCounter: number = 0;
   private static sharedStyleElement: HTMLStyleElement | null = null;
-
-  private options: InnerHighlightOptions;
-  private searchTerms: string[];
-  // private mutationObserver?: MutationObserver;
-
-  constructor(searchTerms: string | string[], options: HighlightOptions = {}) {
-    this.searchTerms = Array.isArray(searchTerms) ? searchTerms : [searchTerms];
-    const { className, ...restOptions } = options;
-    this.options = {
-      className: `${className || 'highlight-text'}-${Highlighter.highlighterIdCounter++}`,
-      caseSensitive: false,
-      containerSelector: '.highlightable',
-      tagName: 'span',
-      excludeSelector: 'script, style, textarea, input, [contenteditable="true"]',
-      ...restOptions
-    };
-    this.applyCustomStyles();
-  }
 
   private static initializeSharedStyleElement() {
     if (!Highlighter.sharedStyleElement) {
@@ -48,6 +26,60 @@ export class Highlighter {
       Highlighter.sharedStyleElement.setAttribute('id', 'search-highlighter-styles');
       document.head.appendChild(Highlighter.sharedStyleElement);
     }
+  }
+
+  private options: InnerHighlightOptions = {
+    className: 'highlight-text',
+    caseSensitive: false,
+    containerSelector: '.highlightable',
+    tagName: 'span',
+    excludeSelector: 'script, style, textarea, input, [contenteditable="true"]'
+  };
+  private searchTerms: string[];
+  // private mutationObserver?: MutationObserver;
+
+  constructor(searchTerms: string | string[], options: HighlightOptions = {}) {
+    this.searchTerms = Array.isArray(searchTerms) ? searchTerms : [searchTerms];
+    Object.assign(this.options, options);
+    this.options.className = `${this.options.className}-${Highlighter.highlighterIdCounter++}`;
+    this.applyCustomStyles();
+  }
+
+  public highlight(): void {
+    console.log(this.options);
+    const containers = document.querySelectorAll(
+      `${this.options.containerSelector}:not(${this.options.excludeSelector})`
+    );
+    const regexes = this.getSearchRegexes();
+
+    containers.forEach((element) => {
+      this.highlightElement(element as HTMLElement, regexes);
+    });
+
+    // // 设置 MutationObserver 以处理动态内容
+    // this.observeMutations();
+  }
+
+  public removeHighlights(): void {
+    const highlightElements = document.querySelectorAll(`.${this.options.className}`);
+    highlightElements.forEach((highlightElement) => {
+      const parent = highlightElement.parentNode as HTMLElement;
+      if (!parent) return;
+
+      const fragment = document.createDocumentFragment();
+      while (highlightElement.firstChild) {
+        fragment.appendChild(highlightElement.firstChild);
+      }
+
+      parent.replaceChild(fragment, highlightElement);
+      parent.normalize();
+    });
+  }
+
+  public updateSearchTerms(newSearchTerms: string | string[]): void {
+    this.removeHighlights();
+    this.searchTerms = Array.isArray(newSearchTerms) ? newSearchTerms : [newSearchTerms];
+    this.highlight();
   }
 
   private applyCustomStyles() {
@@ -71,19 +103,6 @@ export class Highlighter {
       const escapedTerm = escapeRegExp(term);
       return new RegExp(`(${escapedTerm})`, this.options.caseSensitive ? 'g' : 'gi');
     });
-  }
-
-  public highlight(): void {
-    console.log(this.options);
-    const containers = document.querySelectorAll(this.options.containerSelector);
-    const regexes = this.getSearchRegexes();
-
-    containers.forEach((element) => {
-      this.highlightElement(element as HTMLElement, regexes);
-    });
-
-    // // 设置 MutationObserver 以处理动态内容
-    // this.observeMutations();
   }
 
   private highlightElement(element: HTMLElement, regexes: RegExp[]): void {
@@ -129,28 +148,6 @@ export class Highlighter {
       //   }
       // }
     });
-  }
-
-  public removeHighlights(): void {
-    const highlightElements = document.querySelectorAll(`.${this.options.className}`);
-    highlightElements.forEach((highlightElement) => {
-      const parent = highlightElement.parentNode as HTMLElement;
-      if (!parent) return;
-
-      const fragment = document.createDocumentFragment();
-      while (highlightElement.firstChild) {
-        fragment.appendChild(highlightElement.firstChild);
-      }
-
-      parent.replaceChild(fragment, highlightElement);
-      parent.normalize();
-    });
-  }
-
-  public updateSearchTerms(newSearchTerms: string | string[]): void {
-    this.removeHighlights();
-    this.searchTerms = Array.isArray(newSearchTerms) ? newSearchTerms : [newSearchTerms];
-    this.highlight();
   }
 
   // private observeMutations() {
