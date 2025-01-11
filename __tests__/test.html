@@ -13,24 +13,26 @@
 
       // 初始化 Highlighter 实例
       const highlighter1 = new Highlighter(['test'], {
-        customStyles: { backgroundColor: 'yellow' }
+        customStyles: { backgroundColor: 'yellow' },
+        deepSearch: true
       });
       const highlighter2 = new Highlighter(['est'], {
         customStyles: { backgroundColor: 'lightgreen' },
-        tagName: 'a'
+        deepSearch: true
       });
-      const highlighter3 = new Highlighter(['st'], {
-        customStyles: { backgroundColor: 'red' }
+      const highlighter3 = new Highlighter(['st', 'est'], {
+        customStyles: { backgroundColor: 'red' },
+        deepSearch: true
       });
       const highlighter4 = new Highlighter(['t'], {
-        customStyles: { backgroundColor: 'blue' }
+        customStyles: { backgroundColor: 'blue' },
       });
 
-      // 应用高亮
-      highlighter1.highlight();
-      highlighter2.highlight();
       highlighter3.highlight();
-      highlighter4.highlight();
+      // highlighter2.highlight();
+      // highlighter1.highlight();
+
+      // highlighter3.removeHighlights();
 
       console.log('Highlighter applied.');
     </script>

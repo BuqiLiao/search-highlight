@@ -8,14 +8,7 @@ export default defineConfig({
       name: 'SearchHighlight',
       fileName: (format) => `search-highlight.${format}.js`
     },
-    // rollupOptions: {
-    //   external: ['lodash-es'],
-    //   output: {
-    //     globals: {
-    //       'lodash-es': 'lodash'
-    //     }
-    //   }
-    // },
-    outDir: 'dist'
+    outDir: 'dist',
+    sourcemap: true
   }
 });
