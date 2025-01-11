@@ -1,7 +1,10 @@
 import { escapeRegExp } from './utils.js';
 import type { SetRequired, SetOptional } from 'type-fest';
 
-// NOTE: If containerSelector is provided, it will override containerClass + excludeSelector
+/* NOTE:
+ * 1. If containerSelector is provided, it will override containerClass + excludeSelector
+ * 2. If search is a RegExp, the caseSensitive option will be ignored
+ */
 
 type HighlightOptions = {
   className?: string;
@@ -12,7 +15,6 @@ type HighlightOptions = {
   containerSelector?: string;
   customStyles?: Partial<CSSStyleDeclaration>;
   onHighlight?: (element: Node, searchTerm: string) => void;
-
   /**
    * If deepSearch = true, the highlight will also search through the highlighted elements.
    */
@@ -32,7 +34,6 @@ type InnerHighlightOptions = SetRequired<
 export class Highlighter {
   private static highlighterIdCounter: number = 0;
   private static sharedStyleElement: HTMLStyleElement | null = null;
-
   private static initializeSharedStyleElement() {
     if (!Highlighter.sharedStyleElement) {
       Highlighter.sharedStyleElement = document.createElement('style');
@@ -49,26 +50,30 @@ export class Highlighter {
     excludeSelector: 'script, style, textarea, input, [contenteditable="true"]',
     instanceAttributeName: 'data-highlighter-instance'
   };
-  private searchTerms: string[];
+  private mergedRegex: RegExp | null = null;
   private instanceId: number;
   // private mutationObserver?: MutationObserver;
 
-  constructor(searchTerms: string | string[], options: HighlightOptions = {}) {
+  constructor(search: string | string[] | RegExp, options: HighlightOptions = {}) {
     this.instanceId = Highlighter.highlighterIdCounter++;
-    this.searchTerms = Array.isArray(searchTerms) ? searchTerms : [searchTerms];
+    this.buildMergedRegex(search);
     Object.assign(this.options, options);
     this.applyCustomStyles();
   }
 
   public highlight(): void {
-    console.log(this.options);
+    if (!this.mergedRegex) return;
+
     const containers = document.querySelectorAll(
       this.options.containerSelector ?? `.${this.options.containerClass}:not(${this.options.excludeSelector})`
     );
-    const regexes = this.getSearchRegexes();
 
     containers.forEach((element) => {
-      this.highlightElement(element as HTMLElement, regexes);
+      if (this.options.deepSearch) {
+        this.searchAndHighlightDeep(element as HTMLElement, this.mergedRegex!);
+      } else {
+        this.searchAndHighlight(element as HTMLElement, this.mergedRegex!);
+      }
     });
 
     // // 设置 MutationObserver 以处理动态内容
@@ -91,10 +96,27 @@ export class Highlighter {
     });
   }
 
-  public updateSearchTerms(newSearchTerms: string | string[]): void {
+  public updateSearch(newSearch: string | string[] | RegExp): void {
     this.removeHighlights();
-    this.searchTerms = Array.isArray(newSearchTerms) ? newSearchTerms : [newSearchTerms];
+    this.buildMergedRegex(newSearch);
     this.highlight();
+  }
+
+  private buildMergedRegex(search: string | string[] | RegExp) {
+    if (search instanceof RegExp) {
+      this.mergedRegex = search;
+      return;
+    }
+
+    const terms = Array.isArray(search) ? search : [search];
+    if (!terms.length) {
+      this.mergedRegex = null;
+      return;
+    }
+
+    const alternation = terms.map(escapeRegExp).join('|');
+    const flags = this.options.caseSensitive ? 'g' : 'gi';
+    this.mergedRegex = new RegExp(`(${alternation})`, flags);
   }
 
   private applyCustomStyles() {
@@ -111,23 +133,6 @@ export class Highlighter {
     styleRule += `}`;
 
     styleSheet.insertRule(styleRule, styleSheet.cssRules.length);
-  }
-
-  private getSearchRegexes(): RegExp[] {
-    return this.searchTerms.map((term) => {
-      const escapedTerm = escapeRegExp(term);
-      return new RegExp(`(${escapedTerm})`, this.options.caseSensitive ? 'g' : 'gi');
-    });
-  }
-
-  private highlightElement(element: HTMLElement, regexes: RegExp[]): void {
-    regexes.forEach((regex, index) => {
-      if (this.options.deepSearch) {
-        this.searchAndHighlightDeep(element, regex);
-      } else {
-        this.searchAndHighlight(element, regex);
-      }
-    });
   }
 
   private searchAndHighlight(element: HTMLElement, regex: RegExp): void {
@@ -172,7 +177,6 @@ export class Highlighter {
    * 3. 每个 match 转换为一个 DOM Range，通过包裹的方式插入新的高亮标签。
    */
   private searchAndHighlightDeep(element: HTMLElement, regex: RegExp): void {
-    // 1. 先收集所有的 text node 及其文本，构建一个"文本映射表"
     interface TextMapping {
       node: Text;
       globalStart: number; // 在合并文本中的全局 start
@@ -218,17 +222,10 @@ export class Highlighter {
     // 每次匹配都需要从头来过，否则会漏掉多个 match
     while ((match = regex.exec(combinedText)) !== null) {
       const fullMatch = match[0];
-      // 在 combinedText 里的起始与结束
       const startIndex = match.index;
       const endIndex = startIndex + fullMatch.length;
 
-      // 3. 我们将 startIndex/endIndex 转换成 DOM Range，并包裹
       this.wrapRangeDeep(textMappings, startIndex, endIndex);
-
-      // // 触发回调
-      // if (this.options.onHighlight) {
-      //   this.options.onHighlight(element, this.searchTerms[regexIndex]);
-      // }
     }
   }
 
@@ -245,8 +242,7 @@ export class Highlighter {
     startIndex: number,
     endIndex: number
   ) {
-    // 1. 找到 range 起始对应的 textMappings 项
-    let startMapping = -1; // textMappings 的索引
+    let startMapping = -1;
     let endMapping = -1;
     let startOffsetInNode = 0;
     let endOffsetInNode = 0;
