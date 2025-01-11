@@ -1,5 +1,5 @@
 import { escapeRegExp } from './utils.js';
-import type { SetRequired, SetOptional } from 'type-fest';
+import type { SetRequired } from 'type-fest';
 
 /* NOTE:
  * 1. If containerSelector is provided, it will override containerClass + excludeSelector
@@ -76,7 +76,6 @@ export class Highlighter {
       }
     });
 
-    // // 设置 MutationObserver 以处理动态内容
     // this.observeMutations();
   }
 
@@ -170,24 +169,23 @@ export class Highlighter {
   }
 
   /**
-   * 当 deepSearch = true 时，启用新的"合并文本 + Range"方式高亮。
-   * 核心思路：
-   * 1. 收集 element 内所有可见文本，并记录它们在 DOM 中的分布(offset)。
-   * 2. 对合并后的字符串做 regex 搜索，得到所有 match 的 start/end。
-   * 3. 每个 match 转换为一个 DOM Range，通过包裹的方式插入新的高亮标签。
+   * When deepSearch = true, enable the new "merge text + Range" highlighting method.
+   * Core idea:
+   * 1. Collect all visible text within the element and record their distribution (offset) in the DOM.
+   * 2. Perform regex search on the merged string to get all match start/end positions.
+   * 3. Convert each match into a DOM Range and insert a new highlight tag by wrapping.
    */
   private searchAndHighlightDeep(element: HTMLElement, regex: RegExp): void {
     interface TextMapping {
       node: Text;
-      globalStart: number; // 在合并文本中的全局 start
-      globalEnd: number; // 在合并文本中的全局 end
+      globalStart: number;
+      globalEnd: number;
       isHighlighted: boolean;
     }
 
     const textMappings: TextMapping[] = [];
     let globalIndex = 0;
 
-    // 这里不再排除 span.highlight 之类的节点，因为我们要"深度"搜索
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => {
         if (!node.nodeValue || !node.nodeValue.trim()) {
@@ -197,7 +195,7 @@ export class Highlighter {
       }
     });
 
-    let combinedText = ''; // 把整个 element 里的文本合并
+    let combinedText = '';
 
     while (walker.nextNode()) {
       const node = walker.currentNode as Text;
@@ -206,7 +204,6 @@ export class Highlighter {
       const end = start + nodeText.length;
       const isHighlighted = (node.parentNode as HTMLElement)?.classList.contains('highlight-text-2');
 
-      // 加入 textMappings
       textMappings.push({
         node,
         globalStart: start,
@@ -219,7 +216,7 @@ export class Highlighter {
     }
 
     let match;
-    // 每次匹配都需要从头来过，否则会漏掉多个 match
+
     while ((match = regex.exec(combinedText)) !== null) {
       const fullMatch = match[0];
       const startIndex = match.index;
@@ -230,7 +227,7 @@ export class Highlighter {
   }
 
   /**
-   * 给定全局的 start/end，找到对应的 Text 节点区间并用 Range 包裹。
+   * Given global start/end, find the corresponding Text node range and wrap it with a Range.
    */
   private wrapRangeDeep(
     textMappings: {
@@ -250,20 +247,20 @@ export class Highlighter {
     for (let i = 0; i < textMappings.length; i++) {
       const tm = textMappings[i];
 
-      // 如果 startIndex 落在 [tm.globalStart, tm.globalEnd) 里
+      // startIndex is in [tm.globalStart, tm.globalEnd)
       if (startIndex >= tm.globalStart && startIndex < tm.globalEnd) {
         if (tm.isHighlighted && startIndex !== tm.globalStart) {
-          // 如果当前节点已经高亮，且 startIndex 不是在节点开头，则不处理
+          // If the current node is already highlighted and startIndex is not at the node's start, do nothing
           return;
         }
 
         startMapping = i;
         startOffsetInNode = startIndex - tm.globalStart;
       }
-      // 如果 endIndex 落在 [tm.globalStart, tm.globalEnd] 里
+      // endIndex is in [tm.globalStart, tm.globalEnd]
       if (endIndex > tm.globalStart && endIndex <= tm.globalEnd) {
         if (tm.isHighlighted && endIndex !== tm.globalEnd) {
-          // 如果当前节点已经高亮，且 endIndex 不是在节点末尾，则不处理
+          // If the current node is already highlighted and endIndex is not at the node's end, do nothing
           return;
         }
 
@@ -280,13 +277,11 @@ export class Highlighter {
     const startNode = textMappings[startMapping].node;
     const endNode = textMappings[endMapping].node;
 
-    // 2. 构建 Range
     const range = document.createRange();
     range.setStart(startNode, startOffsetInNode);
     range.setEnd(endNode, endOffsetInNode);
     const extractedContents = range.extractContents();
 
-    // 3. 包裹
     const wrapper = document.createElement(this.options.tagName);
     wrapper.className = this.options.className;
     wrapper.setAttribute(this.options.instanceAttributeName, this.instanceId.toString());
@@ -301,7 +296,7 @@ export class Highlighter {
   //   this.mutationObserver = new MutationObserver((mutations) => {
   //     mutations.forEach((mutation) => {
   //       if (mutation.type === 'childList' || mutation.type === 'characterData') {
-  //         this.highlight(); // 重新高亮
+  //         this.highlight();
   //       }
   //     });
   //   });

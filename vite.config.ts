@@ -8,7 +8,8 @@ export default defineConfig({
       name: 'SearchHighlight',
       fileName: (format) => `search-highlight.${format}.js`
     },
-    outDir: 'dist',
-    sourcemap: true
+    outDir: 'dist'
+    // minify: false
+    // sourcemap: true
   }
 });

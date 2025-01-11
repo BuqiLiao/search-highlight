@@ -19,6 +19,10 @@
   "main": "dist/search-highlight.umd.js",
   "module": "dist/search-highlight.es.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/search-highlight.es.js",
+    "./umd": "./dist/search-highlight.umd.js"
+  },
   "keywords": [
     "highlight",
     "text",
