@@ -1,5 +1,5 @@
 {
-  "name": "search-highlight",
+  "name": "search-highlight-js",
   "version": "1.0.0",
   "description": "A lightweight library for highlighting and removing text highlights within DOM elements.",
   "type": "module",
