@@ -145,20 +145,7 @@ highlighter.highlight();
 
 This will inject inline styles like `background-color: yellow; font-weight: bold;` into the highlighted elements.
 
-### 4. Using Callbacks
-
-You can use the `onHighlight` callback to perform additional actions whenever a match is highlighted:
-
-```js
-const highlighter = new Highlighter('hello', {
-  onHighlight: (node, searchTerm) => {
-    console.log('Highlighted:', searchTerm, node);
-  },
-});
-highlighter.highlight();
-```
-
-### 5. Deep Search
+### 4. Deep Search
 
 When `deepSearch` is enabled, the library uses a more advanced algorithm to merge text nodes, search within the combined text, and reapply highlights, even within already highlighted elements.
 

@@ -14,7 +14,7 @@ type HighlightOptions = {
   excludeSelector?: string;
   containerSelector?: string;
   customStyles?: Partial<CSSStyleDeclaration>;
-  onHighlight?: (element: Node, searchTerm: string) => void;
+  // onHighlight?: (element: Node, searchTerm: string) => void;
   /**
    * If deepSearch = true, the highlight will also search through the highlighted elements.
    */
