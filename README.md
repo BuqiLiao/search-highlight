@@ -1,48 +1,52 @@
-Here is the English version of the README for **search-highlight-js**. It introduces the package's features, installation, usage, and advanced options for text highlighting in web applications.
-
----
-
 # search-highlight-js
 
 ## Overview
 
-`search-highlight-js` is a lightweight library for **highlighting text** in web applications. It provides a powerful yet simple API to search for text or patterns and wrap them with customizable highlight tags. Key features include:
+`search-highlight-js` is a lightweight library for **highlighting text** in web applications. It offers a powerful yet simple API to search for text or patterns and wrap them with customizable highlight tags. Key features include:
 
 1. Highlighting multiple search terms using a combined regular expression.
-2. Updating highlights dynamically based on new search terms.
+2. Dynamically updating highlights based on new search terms.
 3. Fully customizable highlight styles, tags, and containers.
-4. Deep search mode to continue searching inside already highlighted elements.
-5. Removing highlights with ease.
+4. Deep search mode to continue searching within already highlighted elements.
+5. Easy removal of highlights.
 
 ## Installation
 
-1. **Using NPM / Yarn**
+### 1. Using NPM / Yarn
 
-   ```bash
-   npm install search-highlight-js
-   # or
-   yarn add search-highlight-js
-   ```
+```bash
+npm install search-highlight-js
+# or
+yarn add search-highlight-js
+```
 
-2. **Using CDN**
+### 2. Using CDN
 
-   ```html
-   <script src="https://cdn.jsdelivr.net/npm/search-highlight-js/dist/search-highlight.umd.js"></script>
-   ```
+```html
+<script src="https://cdn.jsdelivr.net/npm/search-highlight-js/dist/search-highlight.umd.js"></script>
+```
 
 ## Quick Start
 
-Here is a basic example of how to highlight all occurrences of the word "hello" on the page:
+Here's a basic example of how to highlight all occurrences of the word "hello" on the page:
 
-```js
+```javascript
 import { Highlighter } from 'search-highlight-js';
-// Or: const { Highlighter } = window.searchHighlightJs; // If using a script tag
+// Or, if using a script tag:
+// const { Highlighter } = window.searchHighlightJs;
 
-// 1. Create an instance
-const highlighter = new Highlighter('hello');
+// 1. Create an instance with optional configuration
+const highlighter = new Highlighter({
+  className: 'highlight-text',
+  tagName: 'span',
+  caseSensitive: false,
+  containerClass: 'highlightable',
+  excludeSelector: 'script, style, textarea, input, [contenteditable="true"]',
+  instanceAttributeName: 'data-highlighter-instance',
+});
 
-// 2. Apply highlights
-highlighter.highlight();
+// 2. Apply highlights with the desired pattern
+highlighter.highlight('hello');
 ```
 
 Given the following HTML:
@@ -53,110 +57,158 @@ Given the following HTML:
 </div>
 ```
 
-After calling `highlight()`, all occurrences of "hello" will be wrapped in a `<span>` tag with the default class `highlight-text`.
+After calling `highlight('hello')`, all occurrences of "hello" (case-insensitive by default) will be wrapped in a `<span>` tag with the default class `highlight-text`.
 
 ## Usage
 
 ### 1. Constructor
 
-```ts
-constructor(search: string | string[] | RegExp, options?: HighlightOptions)
+```typescript
+constructor(options?: HighlightOptions)
 ```
 
-- **`search`**: The search term(s) or a regular expression.
-  - If it's a regular expression, it will be used directly (case sensitivity options will be ignored).
-  - If it's a string or an array of strings, they will be combined into a single regular expression.
-- **`options`**: An optional configuration object for customizing the behavior.
+- **`options`**: An optional configuration object to customize the behavior of the highlighter.
 
 #### HighlightOptions
 
-```ts
+```typescript
 type HighlightOptions = {
-  className?: string;          // Default: 'highlight-text'
-  caseSensitive?: boolean;     // Default: false
-  tagName?: string;            // Default: 'span'
-  containerClass?: string;     // Default: 'highlightable'
-  excludeSelector?: string;    // Default: 'script, style, textarea, input, [contenteditable="true"]'
-  containerSelector?: string;  // Overrides containerClass + excludeSelector
+  /**
+   * The CSS class name for the highlight element.
+   * @default 'highlight-text'
+   */
+  className?: string;
+
+  /**
+   * Whether the search should be case-sensitive.
+   * @default false
+   */
+  caseSensitive?: boolean;
+
+  /**
+   * The HTML tag name to use for the highlight element.
+   * @default 'span'
+   */
+  tagName?: string;
+
+  /**
+   * The CSS class for container elements to search within.
+   * @default 'highlightable'
+   */
+  containerClass?: string;
+
+  /**
+   * CSS selector to exclude certain elements from being searched.
+   * @default 'script, style, textarea, input, [contenteditable="true"]'
+   */
+  excludeSelector?: string;
+
+  /**
+   * A specific CSS selector for container elements. Overrides `containerClass` and `excludeSelector` if provided.
+   */
+  containerSelector?: string;
+
+  /**
+   * Custom inline styles to apply to the highlight elements.
+   */
   customStyles?: Partial<CSSStyleDeclaration>;
-  onHighlight?: (element: Node, searchTerm: string) => void;
-  deepSearch?: boolean;        // Enables highlighting inside already highlighted elements
-  instanceAttributeName?: string; // Default: 'data-highlighter-instance'
+
+  /**
+   * If true, the highlighter will continue searching within already highlighted elements.
+   * @default false
+   */
+  deepSearch?: boolean;
+
+  /**
+   * The attribute name to store the highlighter instance ID.
+   * @default 'data-highlighter-instance'
+   */
+  instanceAttributeName?: string;
 };
 ```
 
 ### 2. Highlighting Text
 
-#### `highlighter.highlight()`
+#### `highlighter.highlight(pattern)`
 
-Scans the DOM and highlights matching text:
+Scans the DOM within the specified containers and highlights matching text based on the provided pattern.
 
-```js
-const highlighter = new Highlighter('hello', { caseSensitive: true });
-highlighter.highlight();
+- **`pattern`**: The search term(s) or a regular expression.
+  - **String**: A single search term.
+  - **Array of Strings**: Multiple search terms.
+  - **RegExp**: A regular expression for advanced matching. If a `RegExp` is provided, the `caseSensitive` option will be ignored.
+
+**Example: Highlighting a Single Term**
+
+```javascript
+const highlighter = new Highlighter();
+highlighter.highlight('hello');
 ```
 
-When `deepSearch` is set to `true`, it continues searching within already highlighted text. Example:
+**Example: Highlighting Multiple Terms**
 
-```js
-const highlighter = new Highlighter(['hello', 'world'], {
-  deepSearch: true,
-});
-highlighter.highlight();
+```javascript
+const highlighter = new Highlighter();
+highlighter.highlight(['hello', 'world']);
+```
+
+**Example: Using a Regular Expression**
+
+```javascript
+const highlighter = new Highlighter();
+highlighter.highlight(/hello|world/gi);
 ```
 
 #### Removing Highlights
 
-`highlighter.removeHighlights()` removes all previously added highlights:
+`highlighter.removeHighlights()` removes all previously added highlights from the DOM.
 
-```js
-const highlighter = new Highlighter('hello');
-highlighter.highlight();
+**Example:**
 
-// Remove all highlights
+```javascript
+const highlighter = new Highlighter();
+highlighter.highlight('hello');
+
+// Later, to remove all highlights:
 highlighter.removeHighlights();
-```
-
-#### Updating Search Terms
-
-You can update the search term and reapply highlights using `updateSearch(newSearch)`:
-
-```js
-const highlighter = new Highlighter('hello');
-highlighter.highlight();
-
-// Update the search term
-highlighter.updateSearch('new keyword');
 ```
 
 ### 3. Customizing Styles
 
-You can customize the styles of the highlighted text by passing a `customStyles` object:
+Customize the appearance of highlighted text by passing a `customStyles` object in the options.
 
-```js
-const highlighter = new Highlighter('hello', {
+**Example:**
+
+```javascript
+const highlighter = new Highlighter({
   customStyles: {
     backgroundColor: 'yellow',
     fontWeight: 'bold',
   },
 });
-highlighter.highlight();
+highlighter.highlight('hello');
 ```
 
 This will inject inline styles like `background-color: yellow; font-weight: bold;` into the highlighted elements.
 
 ### 4. Deep Search
 
-When `deepSearch` is enabled, the library uses a more advanced algorithm to merge text nodes, search within the combined text, and reapply highlights, even within already highlighted elements.
+When `deepSearch` is enabled, the library uses an advanced algorithm to merge text nodes, search within the combined text, and reapply highlights, even within already highlighted elements.
 
-```js
-const highlighter = new Highlighter('term', { deepSearch: true });
-highlighter.highlight();
+**Example:**
+
+```javascript
+const highlighter = new Highlighter({
+  deepSearch: true,
+});
+highlighter.highlight(['hello', 'world']);
 ```
 
 ## Advanced Example
 
-Suppose you want to highlight case-insensitive occurrences of "Apple" or "Orange" in a specific container `.article-content`, excluding certain elements. Here's how:
+Suppose you want to highlight case-insensitive occurrences of "Apple" or "Orange" within a specific container `.article-content`, excluding certain elements. Here's how:
+
+**HTML:**
 
 ```html
 <div class="article-content">
@@ -164,8 +216,10 @@ Suppose you want to highlight case-insensitive occurrences of "Apple" or "Orange
 </div>
 ```
 
-```js
-const highlighter = new Highlighter(['Apple', 'Orange'], {
+**JavaScript:**
+
+```javascript
+const highlighter = new Highlighter({
   containerSelector: '.article-content',
   caseSensitive: false,
   excludeSelector: 'script, style',
@@ -174,37 +228,32 @@ const highlighter = new Highlighter(['Apple', 'Orange'], {
   },
 });
 
-highlighter.highlight();
+highlighter.highlight(['Apple', 'Orange']);
 ```
 
-The matching text will be highlighted in pink using `<span>` tags.
+The matching text will be highlighted in pink using `<span>` tags within the `.article-content` container.
 
 ## Performance Tips
 
 1. **Reduce Scope**  
-   Specify `containerClass` or `containerSelector` to limit the area being scanned.
+   Specify `containerClass` or `containerSelector` to limit the area being scanned, improving performance on large documents.
 
 2. **Avoid Unnecessary Deep Search**  
-   Only enable `deepSearch` when necessary, as it incurs additional computation.
+   Enable `deepSearch` only when necessary, as it incurs additional computation.
 
 3. **Batch Processing**  
-   For large documents, consider processing the DOM in smaller batches or lazy-loading parts of the content.
+   For extremely large documents, consider processing the DOM in smaller batches or implementing lazy-loading for parts of the content.
 
 ## Common Issues
 
 - **Text Not Highlighted**  
-  - Ensure the text exists in the `containerClass` or `containerSelector`.
-  - Verify that the text matches the search term or regular expression.
+  - Ensure the text exists within elements matching the `containerClass` or `containerSelector`.
+  - Verify that the text matches the search term(s) or regular expression.
   - Excluded elements (e.g., `script`, `style`) will not be processed.
 
 - **Styling Conflicts**  
-  - Use custom styles or override the `.highlight-text` class in your CSS.
-
+  - Use the `customStyles` option to apply specific styles or override the `.highlight-text` class in your CSS to prevent conflicts with existing styles.
 
 ## License
 
 This project is licensed under the **MIT License**.
-
----
-
-Enjoy using **search-highlight-js** for your text-highlighting needs!
