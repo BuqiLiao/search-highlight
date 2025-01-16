@@ -7,28 +7,33 @@
   </head>
   <body>
     <div class="highlightable" contenteditable="true">This is a test. Testing highlight functionality.</div>
-    <div class="highlightable">Another test case for highlight.</div>
+    <div class="highlightable">Another ateabcdefgst case for highlight.</div>
     <script type="module">
       import { Highlighter } from '../dist/search-highlight.es.js';
 
       // 初始化 Highlighter 实例
-      const highlighter1 = new Highlighter(['test'], {
+      const highlighter1 = new Highlighter({
         customStyles: { backgroundColor: 'yellow' },
         deepSearch: true
       });
-      const highlighter2 = new Highlighter(['est'], {
+      const highlighter2 = new Highlighter({
         customStyles: { backgroundColor: 'lightgreen' },
         deepSearch: true
       });
-      const highlighter3 = new Highlighter(['st', 'est'], {
+      const highlighter3 = new Highlighter( {
         customStyles: { backgroundColor: 'red' },
+        // deepSearch: true
+      });
+      const highlighter4 = new Highlighter({
+        customStyles: { backgroundColor: 'blue' },
         deepSearch: true
       });
-      const highlighter4 = new Highlighter(['t'], {
-        customStyles: { backgroundColor: 'blue' },
-      });
 
-      highlighter3.highlight();
+      highlighter3.highlight(['ateabcdefgst', 'est']);
+      highlighter3.highlight('st');
+      highlighter3.highlight('ate');
+      highlighter4.highlight('teabcdefgs');
+      highlighter4.removeHighlights();
       // highlighter2.highlight();
       // highlighter1.highlight();
 

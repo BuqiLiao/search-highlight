@@ -7,12 +7,18 @@ import type { SetRequired } from 'type-fest';
  */
 
 type HighlightOptions = {
-  className?: string;
   caseSensitive?: boolean;
-  tagName?: string;
+  /**
+   * Selector for the container element.
+   */
   containerClass?: string;
   excludeSelector?: string;
   containerSelector?: string;
+  /**
+   * The configuration for the highlight element.
+   */
+  tagName?: string;
+  className?: string;
   customStyles?: Partial<CSSStyleDeclaration>;
   // onHighlight?: (element: Node, searchTerm: string) => void;
   /**
@@ -31,10 +37,16 @@ type InnerHighlightOptions = SetRequired<
   'className' | 'caseSensitive' | 'tagName' | 'excludeSelector' | 'containerClass' | 'instanceAttributeName'
 >;
 
+type TextMapping = {
+  node: Text;
+  index: number;
+  isHighlighted: boolean;
+};
+
 export class Highlighter {
   private static highlighterIdCounter: number = 0;
   private static sharedStyleElement: HTMLStyleElement | null = null;
-  private static initializeSharedStyleElement() {
+  private static ensureSharedStyleElementInitialized() {
     if (!Highlighter.sharedStyleElement) {
       Highlighter.sharedStyleElement = document.createElement('style');
       Highlighter.sharedStyleElement.setAttribute('id', 'search-highlighter-styles');
@@ -50,19 +62,18 @@ export class Highlighter {
     excludeSelector: 'script, style, textarea, input, [contenteditable="true"]',
     instanceAttributeName: 'data-highlighter-instance'
   };
-  private mergedRegex: RegExp | null = null;
   private instanceId: number;
   // private mutationObserver?: MutationObserver;
 
-  constructor(search: string | string[] | RegExp, options: HighlightOptions = {}) {
+  constructor(options: HighlightOptions = {}) {
     this.instanceId = Highlighter.highlighterIdCounter++;
-    this.buildMergedRegex(search);
     Object.assign(this.options, options);
     this.applyCustomStyles();
   }
 
-  public highlight(): void {
-    if (!this.mergedRegex) return;
+  public highlight(pattern: string | string[] | RegExp): void {
+    const mergedRegex = this.buildMergedRegex(pattern);
+    if (!mergedRegex) return;
 
     const containers = document.querySelectorAll(
       this.options.containerSelector ?? `.${this.options.containerClass}:not(${this.options.excludeSelector})`
@@ -70,17 +81,17 @@ export class Highlighter {
 
     containers.forEach((element) => {
       if (this.options.deepSearch) {
-        this.searchAndHighlightDeep(element as HTMLElement, this.mergedRegex!);
+        this.searchAndHighlightDeep(element as HTMLElement, mergedRegex);
       } else {
-        this.searchAndHighlight(element as HTMLElement, this.mergedRegex!);
+        this.searchAndHighlight(element as HTMLElement, mergedRegex);
       }
     });
-
-    // this.observeMutations();
   }
 
   public removeHighlights(): void {
-    const highlightElements = document.querySelectorAll(`.${this.options.className}`);
+    const highlightElements = document.querySelectorAll(
+      `.${this.options.className}[${this.options.instanceAttributeName}="${this.instanceId}"]`
+    );
     highlightElements.forEach((highlightElement) => {
       const parent = highlightElement.parentNode as HTMLElement;
       if (!parent) return;
@@ -95,33 +106,10 @@ export class Highlighter {
     });
   }
 
-  public updateSearch(newSearch: string | string[] | RegExp): void {
-    this.removeHighlights();
-    this.buildMergedRegex(newSearch);
-    this.highlight();
-  }
-
-  private buildMergedRegex(search: string | string[] | RegExp) {
-    if (search instanceof RegExp) {
-      this.mergedRegex = search;
-      return;
-    }
-
-    const terms = Array.isArray(search) ? search : [search];
-    if (!terms.length) {
-      this.mergedRegex = null;
-      return;
-    }
-
-    const alternation = terms.map(escapeRegExp).join('|');
-    const flags = this.options.caseSensitive ? 'g' : 'gi';
-    this.mergedRegex = new RegExp(`(${alternation})`, flags);
-  }
-
   private applyCustomStyles() {
     if (!this.options.customStyles) return;
 
-    Highlighter.initializeSharedStyleElement();
+    Highlighter.ensureSharedStyleElementInitialized();
     const styleSheet = Highlighter.sharedStyleElement!.sheet as CSSStyleSheet;
 
     let styleRule = `.${this.options.className}[${this.options.instanceAttributeName}="${this.instanceId}"] {`;
@@ -132,6 +120,21 @@ export class Highlighter {
     styleRule += `}`;
 
     styleSheet.insertRule(styleRule, styleSheet.cssRules.length);
+  }
+
+  private buildMergedRegex(pattern: string | string[] | RegExp) {
+    if (pattern instanceof RegExp) {
+      return pattern;
+    }
+
+    const terms = Array.isArray(pattern) ? pattern : [pattern];
+    if (!terms.length) {
+      return null;
+    }
+
+    const alternation = terms.map(escapeRegExp).join('|');
+    const flags = this.options.caseSensitive ? 'g' : 'gi';
+    return new RegExp(`(${alternation})`, flags);
   }
 
   private searchAndHighlight(element: HTMLElement, regex: RegExp): void {
@@ -176,12 +179,7 @@ export class Highlighter {
    * 3. Convert each match into a DOM Range and insert a new highlight tag by wrapping.
    */
   private searchAndHighlightDeep(element: HTMLElement, regex: RegExp): void {
-    interface TextMapping {
-      node: Text;
-      globalStart: number;
-      globalEnd: number;
-      isHighlighted: boolean;
-    }
+    if (!element.textContent) return;
 
     const textMappings: TextMapping[] = [];
     let globalIndex = 0;
@@ -195,32 +193,37 @@ export class Highlighter {
       }
     });
 
-    let combinedText = '';
+    // const iterator = document.createNodeIterator(element, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    // console.dir(iterator.nextNode());
+
+    console.dir(walker.currentNode);
 
     while (walker.nextNode()) {
       const node = walker.currentNode as Text;
-      const nodeText = node.nodeValue!;
-      const start = globalIndex;
-      const end = start + nodeText.length;
-      const isHighlighted = (node.parentNode as HTMLElement)?.classList.contains('highlight-text-2');
+      // console.dir(node);
+      // const nodeText = node.nodeValue!;
+      // const start = globalIndex;
+      // const end = start + nodeText.length;
+      // const isHighlighted = (node.parentNode as HTMLElement)?.classList.contains(this.options.className);
 
       textMappings.push({
         node,
-        globalStart: start,
-        globalEnd: end,
-        isHighlighted
+        index: globalIndex,
+        isHighlighted: node.parentElement?.classList.contains(this.options.className) ?? false
       });
 
-      combinedText += nodeText;
-      globalIndex = end;
+      globalIndex += node.length;
     }
+
+    console.log(textMappings);
 
     let match;
 
-    while ((match = regex.exec(combinedText)) !== null) {
+    while ((match = regex.exec(element.textContent)) !== null) {
       const fullMatch = match[0];
       const startIndex = match.index;
-      const endIndex = startIndex + fullMatch.length;
+      const endIndex = startIndex + fullMatch.length - 1;
+      console.log(startIndex, endIndex);
 
       this.wrapRangeDeep(textMappings, startIndex, endIndex);
     }
@@ -229,16 +232,7 @@ export class Highlighter {
   /**
    * Given global start/end, find the corresponding Text node range and wrap it with a Range.
    */
-  private wrapRangeDeep(
-    textMappings: {
-      node: Text;
-      globalStart: number;
-      globalEnd: number;
-      isHighlighted: boolean;
-    }[],
-    startIndex: number,
-    endIndex: number
-  ) {
+  private wrapRangeDeep(textMappings: TextMapping[], startIndex: number, endIndex: number) {
     let startMapping = -1;
     let endMapping = -1;
     let startOffsetInNode = 0;
@@ -247,25 +241,15 @@ export class Highlighter {
     for (let i = 0; i < textMappings.length; i++) {
       const tm = textMappings[i];
 
-      // startIndex is in [tm.globalStart, tm.globalEnd)
-      if (startIndex >= tm.globalStart && startIndex < tm.globalEnd) {
-        if (tm.isHighlighted && startIndex !== tm.globalStart) {
-          // If the current node is already highlighted and startIndex is not at the node's start, do nothing
-          return;
-        }
-
+      // startIndex is in [tm.index, tm.index + tm.node.length)
+      if (startIndex >= tm.index && startIndex < tm.index + tm.node.length) {
         startMapping = i;
-        startOffsetInNode = startIndex - tm.globalStart;
+        startOffsetInNode = startIndex - tm.index;
       }
-      // endIndex is in [tm.globalStart, tm.globalEnd]
-      if (endIndex > tm.globalStart && endIndex <= tm.globalEnd) {
-        if (tm.isHighlighted && endIndex !== tm.globalEnd) {
-          // If the current node is already highlighted and endIndex is not at the node's end, do nothing
-          return;
-        }
-
+      // endIndex is in [tm.index, tm.index + tm.node.length)
+      if (endIndex >= tm.index && endIndex < tm.index + tm.node.length) {
         endMapping = i;
-        endOffsetInNode = endIndex - tm.globalStart;
+        endOffsetInNode = endIndex - tm.index;
         break;
       }
     }
@@ -274,20 +258,58 @@ export class Highlighter {
       return;
     }
 
+    console.log(startMapping, endMapping, startOffsetInNode, endOffsetInNode);
+
+    // for (let i = startMapping; i <= endMapping; i++) {
+    //   const tm = textMappings[i];
+
+    // }
+
     const startNode = textMappings[startMapping].node;
     const endNode = textMappings[endMapping].node;
 
-    const range = document.createRange();
-    range.setStart(startNode, startOffsetInNode);
-    range.setEnd(endNode, endOffsetInNode);
-    const extractedContents = range.extractContents();
+    const remainingStartNode = startNode.splitText(startOffsetInNode);
+    startNode.parentNode?.replaceChild(this.wrapText(remainingStartNode.textContent!), remainingStartNode);
 
+    endNode.splitText(endOffsetInNode + 1);
+    endNode.parentNode?.replaceChild(this.wrapText(endNode.textContent!), endNode);
+
+    for (let i = startMapping + 1; i < endMapping; i++) {
+      const tm = textMappings[i];
+      tm.node.parentNode?.replaceChild(this.wrapText(tm.node.textContent!), tm.node);
+    }
+
+    // const range = document.createRange();
+    // range.setStart(startNode, startOffsetInNode);
+    // range.setEnd(endNode, endOffsetInNode);
+    // const extractedContents = range.extractContents();
+    // // console.dir(extractedContents.children);
+    // for (const child of extractedContents.childNodes) {
+    //   console.log(child);
+    // }
+
+    // const wrapper = document.createElement(this.options.tagName);
+    // wrapper.className = this.options.className;
+    // wrapper.setAttribute(this.options.instanceAttributeName, this.instanceId.toString());
+    // wrapper.appendChild(extractedContents);
+
+    // range.insertNode(wrapper);
+  }
+
+  private wrapNode(node: Node) {
     const wrapper = document.createElement(this.options.tagName);
     wrapper.className = this.options.className;
     wrapper.setAttribute(this.options.instanceAttributeName, this.instanceId.toString());
-    wrapper.appendChild(extractedContents);
+    wrapper.appendChild(node);
+    return wrapper;
+  }
 
-    range.insertNode(wrapper);
+  private wrapText(text: string) {
+    const wrapper = document.createElement(this.options.tagName);
+    wrapper.className = this.options.className;
+    wrapper.setAttribute(this.options.instanceAttributeName, this.instanceId.toString());
+    wrapper.appendChild(document.createTextNode(text));
+    return wrapper;
   }
 
   // private observeMutations() {
